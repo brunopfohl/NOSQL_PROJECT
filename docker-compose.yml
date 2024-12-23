@@ -110,10 +110,10 @@ services:
       - config-server-3
 
   # Shard 1
-  shard-1-node-1:
+  shard1-1:
     <<: *shard-node-base
-    hostname: shard-1-node-1
-    command: mongod --shardsvr --replSet shard-1 --port 27018 --keyFile /etc/mongodb/pki/keyfile
+    hostname: shard1-1
+    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard-1-node-1-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
@@ -125,27 +125,27 @@ services:
       retries: 3
       start_period: 30s
 
-  shard-1-node-2:
+  shard1-2:
     <<: *shard-node-base
-    hostname: shard-1-node-2
-    command: mongod --shardsvr --replSet shard-1 --port 27018 --keyFile /etc/mongodb/pki/keyfile
+    hostname: shard1-2
+    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard-1-node-2-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
-  shard-1-node-3:
+  shard1-3:
     <<: *shard-node-base
-    hostname: shard-1-node-3
-    command: mongod --shardsvr --replSet shard-1 --port 27018 --keyFile /etc/mongodb/pki/keyfile
+    hostname: shard1-3
+    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard-1-node-3-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   # Shard 2
-  shard-2-node-1:
+  shard2-1:
     <<: *shard-node-base
-    hostname: shard-2-node-1
-    command: mongod --shardsvr --replSet shard-2 --port 27018 --keyFile /etc/mongodb/pki/keyfile
+    hostname: shard2-1
+    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard-2-node-1-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
@@ -153,16 +153,16 @@ services:
 
   shard-2-node-2:
     <<: *shard-node-base
-    hostname: shard-2-node-2
-    command: mongod --shardsvr --replSet shard-2 --port 27018 --keyFile /etc/mongodb/pki/keyfile
+    hostname: shard2-2
+    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard-2-node-2-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   shard-2-node-3:
     <<: *shard-node-base
-    hostname: shard-2-node-3
-    command: mongod --shardsvr --replSet shard-2 --port 27018 --keyFile /etc/mongodb/pki/keyfile
+    hostname: shard2-3
+    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard-2-node-3-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
