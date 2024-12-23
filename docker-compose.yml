@@ -57,6 +57,12 @@ services:
       - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/init.js
     ports:
       - "27019:27019"
+    healthcheck:
+      test: mongosh --port 27019 --eval "rs.status()" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   config-server-2:
     <<: *config-server-base
@@ -112,6 +118,12 @@ services:
       - shard-1-node-1-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard1.js:/docker-entrypoint-initdb.d/init.js
+    healthcheck:
+      test: mongosh --port 27018 --eval "rs.status()" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
 
   shard-1-node-2:
     <<: *shard-node-base
