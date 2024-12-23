@@ -36,16 +36,48 @@ docker-compose up -d
 
 ## Architecture
 
-- Router: localhost:27017
+- Router: localhost:27020  # Updated port
 - Config Servers: cfgsvr1:27017, cfgsvr2:27017, cfgsvr3:27017
 - Shard 1: shard1-1:27017, shard1-2:27017, shard1-3:27017
 - Shard 2: shard2-1:27017, shard2-2:27017, shard2-3:27017
+
+## High Availability Features
+
+### Multiple Query Routers
+- Primary: localhost:27017 (HAProxy)
+- Backup: localhost:27027 (Direct access)
+- Load balanced through HAProxy
+
+### Monitoring
+Access monitoring at:
+- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3000
+
+### Resource Management
+Each component has dedicated resource limits:
+- Config Servers: 1 CPU, 1GB RAM
+- Query Routers: 2 CPU, 2GB RAM
+- Shards: According to workload needs
+
+### Maintenance
+For rolling updates:
+```bash
+# Update one router at a time
+docker-compose up -d --no-deps --build mongos1
+docker-compose up -d --no-deps --build mongos2
+```
+
+### Backups
+Regular backups can be performed using:
+```bash
+docker exec mongos1 mongodump --uri="mongodb://admin:password@localhost:27017" --out=/backup
+```
 
 ## Connecting to the Cluster
 
 Connect through the router:
 ```
-mongodb://myuser:mypassword@localhost:27017
+mongodb://myuser:mypassword@localhost:27020  # Updated port
 ```
 
 ## Verify Cluster Status
