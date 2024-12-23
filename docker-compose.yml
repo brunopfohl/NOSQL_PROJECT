@@ -5,15 +5,15 @@ networks:
     driver: bridge
 
 volumes:
-  config-server-1-data:
-  config-server-2-data:
-  config-server-3-data:
-  shard-1-node-1-data:
-  shard-1-node-2-data:
-  shard-1-node-3-data:
-  shard-2-node-1-data:
-  shard-2-node-2-data:
-  shard-2-node-3-data:
+  cfgsvr1-data:
+  cfgsvr2-data:
+  cfgsvr3-data:
+  shard1-1-data:
+  shard1-2-data:
+  shard1-3-data:
+  shard2-1-data:
+  shard2-2-data:
+  shard2-3-data:
 
 x-mongodb-config: &mongodb-config
   image: mongo:7.0-jammy
@@ -48,11 +48,17 @@ x-shard-node: &shard-node-base
 
 services:
   # Config servers
-  config-server-1:
+  cfgsvr1:
     <<: *config-server-base
-    hostname: config-server-1
+    hostname: cfgsvr1
+    command: >-
+      mongod --configsvr 
+      --replSet cfgrs 
+      --port 27019 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
     volumes:
-      - config-server-1-data:/data/db
+      - cfgsvr1-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/init.js
     ports:
@@ -64,25 +70,25 @@ services:
       retries: 3
       start_period: 30s
 
-  config-server-2:
+  cfgsvr2:
     <<: *config-server-base
-    hostname: config-server-2
+    hostname: cfgsvr2
     volumes:
-      - config-server-2-data:/data/db
+      - cfgsvr2-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
-  config-server-3:
+  cfgsvr3:
     <<: *config-server-base
-    hostname: config-server-3
+    hostname: cfgsvr3
     volumes:
-      - config-server-3-data:/data/db
+      - cfgsvr3-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   # Router (mongos)
   router-1:
     <<: *mongodb-config
     hostname: router-1
-    command: mongos --configdb config-replica-set/config-server-1:27019,config-server-2:27019,config-server-3:27019 --bind_ip_all --port 27017 --keyFile /etc/mongodb/pki/keyfile
+    command: mongos --configdb cfgrs/cfgsvr1:27019,cfgsvr2:27019,cfgsvr3:27019 --bind_ip_all --port 27017 --keyFile /etc/mongodb/pki/keyfile
     ports:
       - "27017:27017"
     deploy: *config-resources
@@ -91,31 +97,36 @@ services:
       - ./scripts/mongo/init-router.js:/docker-entrypoint-initdb.d/init-router.js
       - ./scripts/mongo/init-collections.js:/docker-entrypoint-initdb.d/init-collections.js
     depends_on:
-      - config-server-1
-      - config-server-2
-      - config-server-3
+      - cfgsvr1
+      - cfgsvr2
+      - cfgsvr3
 
   router-2:
     <<: *mongodb-config
     hostname: router-2
-    command: mongos --configdb config-replica-set/config-server-1:27019,config-server-2:27019,config-server-3:27019 --bind_ip_all --port 27017 --keyFile /etc/mongodb/pki/keyfile
+    command: mongos --configdb cfgrs/cfgsvr1:27019,cfgsvr2:27019,cfgsvr3:27019 --bind_ip_all --port 27017 --keyFile /etc/mongodb/pki/keyfile
     ports:
       - "27027:27017"
     deploy: *config-resources
     volumes:
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     depends_on:
-      - config-server-1
-      - config-server-2
-      - config-server-3
+      - cfgsvr1
+      - cfgsvr2
+      - cfgsvr3
 
   # Shard 1
   shard1-1:
     <<: *shard-node-base
     hostname: shard1-1
-    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
+    command: >-
+      mongod --replSet shard1rs 
+      --shardsvr 
+      --port 27018 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
     volumes:
-      - shard-1-node-1-data:/data/db
+      - shard1-1-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard1.js:/docker-entrypoint-initdb.d/init.js
     healthcheck:
@@ -128,43 +139,68 @@ services:
   shard1-2:
     <<: *shard-node-base
     hostname: shard1-2
-    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
+    command: >-
+      mongod --shardsvr 
+      --replSet shard1rs 
+      --port 27018 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
     volumes:
-      - shard-1-node-2-data:/data/db
+      - shard1-2-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   shard1-3:
     <<: *shard-node-base
     hostname: shard1-3
-    command: mongod --shardsvr --replSet shard1rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
+    command: >-
+      mongod --shardsvr 
+      --replSet shard1rs 
+      --port 27018 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
     volumes:
-      - shard-1-node-3-data:/data/db
+      - shard1-3-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   # Shard 2
   shard2-1:
     <<: *shard-node-base
     hostname: shard2-1
-    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
+    command: >-
+      mongod --shardsvr 
+      --replSet shard2rs 
+      --port 27018 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
     volumes:
-      - shard-2-node-1-data:/data/db
+      - shard2-1-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard2.js:/docker-entrypoint-initdb.d/init.js
 
-  shard-2-node-2:
+  shard2-2:
     <<: *shard-node-base
     hostname: shard2-2
-    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
+    command: >-
+      mongod --shardsvr 
+      --replSet shard2rs 
+      --port 27018 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
     volumes:
-      - shard-2-node-2-data:/data/db
+      - shard2-2-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
-  shard-2-node-3:
+  shard2-3:
     <<: *shard-node-base
     hostname: shard2-3
-    command: mongod --shardsvr --replSet shard2rs --port 27018 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
+    command: >-
+      mongod --shardsvr 
+      --replSet shard2rs 
+      --port 27018 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
     volumes:
-      - shard-2-node-3-data:/data/db
+      - shard2-3-data:/data/db
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   # Monitoring
