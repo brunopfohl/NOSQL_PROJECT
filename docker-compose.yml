@@ -44,6 +44,7 @@ services:
       MONGO_INITDB_DATABASE: '${DB_NAME:-test}'
       DB_USERNAME: ${DB_USERNAME:-myuser}
       DB_PASSWORD: ${DB_PASSWORD:-mypassword}
+
   mongo2:
     container_name: mongo_rs1
     image: mongo:7.0-jammy
@@ -59,6 +60,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: '${MONGO_ADMIN_USER:-admin}'
       MONGO_INITDB_ROOT_PASSWORD: '${MONGO_ADMIN_PASSWD:-veryStringPassword}'
+
   mongo3:
     container_name: mongo_rs2
     image: mongo:7.0-jammy
@@ -75,12 +77,13 @@ services:
       MONGO_INITDB_ROOT_USERNAME: '${MONGO_ADMIN_USER:-admin}'
       MONGO_INITDB_ROOT_PASSWORD: '${MONGO_ADMIN_PASSWD:-veryStringPassword}'
 
-  # Config Servers
   cfgsvr1:
     image: mongo:7.0-jammy
-    command: mongod --configsvr --replSet cfgrs --port 27017
+    command: mongod --configsvr --replSet cfgrs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - cfg1-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/init-configserver.js
     networks:
       - mongo-cluster
     environment:
@@ -89,9 +92,10 @@ services:
 
   cfgsvr2:
     image: mongo:7.0-jammy
-    command: mongod --configsvr --replSet cfgrs --port 27017
+    command: mongod --configsvr --replSet cfgrs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - cfg2-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     networks:
       - mongo-cluster
     environment:
@@ -100,21 +104,23 @@ services:
 
   cfgsvr3:
     image: mongo:7.0-jammy
-    command: mongod --configsvr --replSet cfgrs --port 27017
+    command: mongod --configsvr --replSet cfgrs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - cfg3-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     networks:
       - mongo-cluster
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
 
-  # Shard 1 Replica Set
   shard1-1:
     image: mongo:7.0-jammy
-    command: mongod --shardsvr --replSet shard1rs --port 27017
+    command: mongod --shardsvr --replSet shard1rs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard1-1-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/init-shard1.js:/docker-entrypoint-initdb.d/init-shard1.js
     networks:
       - mongo-cluster
     environment:
@@ -123,9 +129,10 @@ services:
 
   shard1-2:
     image: mongo:7.0-jammy
-    command: mongod --shardsvr --replSet shard1rs --port 27017
+    command: mongod --shardsvr --replSet shard1rs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard1-2-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     networks:
       - mongo-cluster
     environment:
@@ -134,21 +141,22 @@ services:
 
   shard1-3:
     image: mongo:7.0-jammy
-    command: mongod --shardsvr --replSet shard1rs --port 27017
+    command: mongod --shardsvr --replSet shard1rs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard1-3-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     networks:
       - mongo-cluster
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
 
-  # Shard 2 Replica Set
   shard2-1:
     image: mongo:7.0-jammy
-    command: mongod --shardsvr --replSet shard2rs --port 27017
+    command: mongod --shardsvr --replSet shard2rs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard2-1-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     networks:
       - mongo-cluster
     environment:
@@ -157,9 +165,10 @@ services:
 
   shard2-2:
     image: mongo:7.0-jammy
-    command: mongod --shardsvr --replSet shard2rs --port 27017
+    command: mongod --shardsvr --replSet shard2rs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard2-2-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     networks:
       - mongo-cluster
     environment:
@@ -168,19 +177,23 @@ services:
 
   shard2-3:
     image: mongo:7.0-jammy
-    command: mongod --shardsvr --replSet shard2rs --port 27017
+    command: mongod --shardsvr --replSet shard2rs --port 27017 --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard2-3-data:/data/db
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
     networks:
       - mongo-cluster
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
 
-  # Router
   mongos:
     image: mongo:7.0-jammy
-    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all
+    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --keyFile /etc/mongodb/pki/keyfile
+    volumes:
+      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/init-router.js:/docker-entrypoint-initdb.d/init-router.js
+      - ./scripts/mongo/init-collections.js:/docker-entrypoint-initdb.d/init-collections.js
     ports:
       - "27017:27017"
     networks:
