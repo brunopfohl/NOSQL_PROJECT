@@ -1,3 +1,5 @@
+version: '3.8'
+
 networks:
   mongo-cluster:
     driver: bridge
@@ -6,6 +8,15 @@ volumes:
   mongo1-data:
   mongo2-data:
   mongo3-data:
+  cfg1-data:
+  cfg2-data:
+  cfg3-data:
+  shard1-1-data:
+  shard1-2-data:
+  shard1-3-data:
+  shard2-1-data:
+  shard2-2-data:
+  shard2-3-data:
 
 services:
   mongo1:
@@ -63,3 +74,120 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: '${MONGO_ADMIN_USER:-admin}'
       MONGO_INITDB_ROOT_PASSWORD: '${MONGO_ADMIN_PASSWD:-veryStringPassword}'
+
+  # Config Servers
+  cfgsvr1:
+    image: mongo:7.0-jammy
+    command: mongod --configsvr --replSet cfgrs --port 27017
+    volumes:
+      - cfg1-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  cfgsvr2:
+    image: mongo:7.0-jammy
+    command: mongod --configsvr --replSet cfgrs --port 27017
+    volumes:
+      - cfg2-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  cfgsvr3:
+    image: mongo:7.0-jammy
+    command: mongod --configsvr --replSet cfgrs --port 27017
+    volumes:
+      - cfg3-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  # Shard 1 Replica Set
+  shard1-1:
+    image: mongo:7.0-jammy
+    command: mongod --shardsvr --replSet shard1rs --port 27017
+    volumes:
+      - shard1-1-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  shard1-2:
+    image: mongo:7.0-jammy
+    command: mongod --shardsvr --replSet shard1rs --port 27017
+    volumes:
+      - shard1-2-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  shard1-3:
+    image: mongo:7.0-jammy
+    command: mongod --shardsvr --replSet shard1rs --port 27017
+    volumes:
+      - shard1-3-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  # Shard 2 Replica Set
+  shard2-1:
+    image: mongo:7.0-jammy
+    command: mongod --shardsvr --replSet shard2rs --port 27017
+    volumes:
+      - shard2-1-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  shard2-2:
+    image: mongo:7.0-jammy
+    command: mongod --shardsvr --replSet shard2rs --port 27017
+    volumes:
+      - shard2-2-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  shard2-3:
+    image: mongo:7.0-jammy
+    command: mongod --shardsvr --replSet shard2rs --port 27017
+    volumes:
+      - shard2-3-data:/data/db
+    networks:
+      - mongo-cluster
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ADMIN_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ADMIN_PASSWD:-veryStringPassword}
+
+  # Router
+  mongos:
+    image: mongo:7.0-jammy
+    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all
+    ports:
+      - "27017:27017"
+    networks:
+      - mongo-cluster
+    depends_on:
+      - cfgsvr1
+      - cfgsvr2
+      - cfgsvr3
+      - shard1-1
+      - shard2-1
