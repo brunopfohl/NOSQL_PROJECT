@@ -14,6 +14,15 @@ volumes:
   shard2-1-data:
   shard2-2-data:
   shard2-3-data:
+  cfgsvr1-config:
+  cfgsvr2-config:
+  cfgsvr3-config:
+  shard1-1-config:
+  shard1-2-config:
+  shard1-3-config:
+  shard2-1-config:
+  shard2-2-config:
+  shard2-3-config:
 
 x-mongodb-config: &mongodb-config
   image: mongo:7.0-jammy
@@ -49,14 +58,20 @@ services:
   cfgsvr1:
     <<: *config-server-base
     hostname: cfgsvr1
+    container_name: mongo-config-01
     command: >-
       mongod --configsvr 
       --replSet cfgrs 
       --port 27019 
       --bind_ip_all 
       --keyFile /etc/mongodb/pki/keyfile
+      --wiredTigerCacheSizeGB 1
+      --oplogSize 1024
+      --setParameter diagnosticDataCollectionEnabled=true
+      --setParameter enableLocalhostAuthBypass=false
     volumes:
       - cfgsvr1-data:/data/db
+      - cfgsvr1-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/init.js
     ports:
@@ -67,19 +82,40 @@ services:
       timeout: 5s
       retries: 3
       start_period: 30s
+    restart: always
+    depends_on:
+      - shard1-1
+      - shard2-1
 
   cfgsvr2:
     <<: *config-server-base
     hostname: cfgsvr2
+    container_name: mongo-config-02
+    command: >-
+      mongod --configsvr 
+      --replSet cfgrs 
+      --port 27019 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
+      --wiredTigerCacheSizeGB 1
+      --oplogSize 1024
+      --setParameter diagnosticDataCollectionEnabled=true
+      --setParameter enableLocalhostAuthBypass=false
     volumes:
       - cfgsvr2-data:/data/db
+      - cfgsvr2-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+    restart: always
+    depends_on:
+      - shard1-1
+      - shard2-1
 
   cfgsvr3:
     <<: *config-server-base
     hostname: cfgsvr3
     volumes:
       - cfgsvr3-data:/data/db
+      - cfgsvr3-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   # Router (mongos)
@@ -117,16 +153,25 @@ services:
   shard1-1:
     <<: *shard-node-base
     hostname: shard1-1
+    container_name: shard-01-node-a
     command: >-
       mongod --replSet shard1rs 
       --shardsvr 
       --port 27018 
       --bind_ip_all 
       --keyFile /etc/mongodb/pki/keyfile
+    ports:
+      - "27018:27018"  # Add explicit port mapping
     volumes:
       - shard1-1-data:/data/db
+      - shard1-1-config:/data/configdb
+      - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard1.js:/docker-entrypoint-initdb.d/init.js
+    restart: always
+    links:
+      - shard1-2
+      - shard1-3
     healthcheck:
       test: mongosh --port 27018 --eval "rs.status()" || exit 1
       interval: 10s
@@ -137,6 +182,7 @@ services:
   shard1-2:
     <<: *shard-node-base
     hostname: shard1-2
+    container_name: shard-01-node-b
     command: >-
       mongod --shardsvr 
       --replSet shard1rs 
@@ -145,7 +191,10 @@ services:
       --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard1-2-data:/data/db
+      - shard1-2-config:/data/configdb
+      - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+    restart: always
 
   shard1-3:
     <<: *shard-node-base
@@ -158,22 +207,32 @@ services:
       --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard1-3-data:/data/db
+      - shard1-3-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   # Shard 2
   shard2-1:
     <<: *shard-node-base
     hostname: shard2-1
+    container_name: shard-02-node-a
     command: >-
       mongod --shardsvr 
       --replSet shard2rs 
       --port 27018 
       --bind_ip_all 
       --keyFile /etc/mongodb/pki/keyfile
+    ports:
+      - "27028:27018"  # Add explicit port mapping
     volumes:
       - shard2-1-data:/data/db
+      - shard2-1-config:/data/configdb
+      - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard2.js:/docker-entrypoint-initdb.d/init.js
+    restart: always
+    links:
+      - shard2-2
+      - shard2-3
 
   shard2-2:
     <<: *shard-node-base
@@ -186,6 +245,8 @@ services:
       --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard2-2-data:/data/db
+      - shard2-2-config:/data/configdb
+      - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   shard2-3:
@@ -199,6 +260,7 @@ services:
       --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - shard2-3-data:/data/db
+      - shard2-3-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
 
   # Monitoring
