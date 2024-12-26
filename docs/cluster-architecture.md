@@ -57,7 +57,3 @@ This cluster implements a production-grade MongoDB sharded setup with:
 - Custom bridge network (mongo-cluster)
 - Internal DNS resolution
 - Port mapping for external access
-
-## Environment Variables
-- MONGO_ADMIN_USER: Root username
-- MONGO_ADMIN_PASSWD: Root password

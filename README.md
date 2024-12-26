@@ -22,8 +22,6 @@ chmod 400 scripts/mongo/rs_keyfile
 
 2. Set environment variables (optional):
 ```bash
-export MONGO_ADMIN_USER=admin
-export MONGO_ADMIN_PASSWD=veryStringPassword
 export DB_NAME=test
 export DB_USERNAME=myuser
 export DB_PASSWORD=mypassword
