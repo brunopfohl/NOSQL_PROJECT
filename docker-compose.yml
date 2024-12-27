@@ -14,27 +14,113 @@ volumes:
   shard3-1-data:
   shard3-2-data:
   shard3-3-data:
+  cfgsvr1-data:
+  cfgsvr2-data:
+  cfgsvr3-data:
+  cfgsvr1-config:
+  cfgsvr2-config:
+  cfgsvr3-config:
 
 x-mongodb-config: &mongodb-config
   build:
     context: .
   networks:
     - mongodb-network
-  environment: &mongodb-env
-    MONGO_INITDB_DATABASE: admin
-    DB_USERNAME: '${MONGO_ADMIN_USER:-admin}'
-    DB_PASSWORD: '${MONGO_ADMIN_PASSWD:-veryStringPassword}'
 
 x-shard-node: &shard-node-base
   <<: *mongodb-config
 
 services:
+  # Config servers
+  cfgsvr1:
+    <<: *mongodb-config
+    hostname: cfgsvr1
+    container_name: cfg-node-a
+    command: >-
+      mongod --configsvr 
+      --replSet cfgrs 
+      --port 27019 
+      --bind_ip_all
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27119:27019"
+    volumes:
+      - cfgsvr1-data:/data/db
+      - cfgsvr1-config:/data/configdb
+      - ./scripts:/data/scripts
+    healthcheck:
+      test: |
+        bash -c 'if mongosh --port 27019 --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --port 27019 --eval "rs.status().ok" | grep -q "1"; then
+            exit 0;
+          else
+            mongosh --port 27019 < /data/scripts/init-configserver.js || exit 1;
+          fi
+        else
+          exit 1;
+        fi'
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
+    restart: always
+
+  cfgsvr2:
+    <<: *mongodb-config
+    hostname: cfgsvr2
+    container_name: cfg-node-b
+    command: >-
+      mongod --configsvr 
+      --replSet cfgrs 
+      --port 27019 
+      --bind_ip_all
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27219:27019"
+    volumes:
+      - cfgsvr2-data:/data/db
+      - cfgsvr2-config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27019", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
+  cfgsvr3:
+    <<: *mongodb-config
+    hostname: cfgsvr3
+    container_name: cfg-node-c
+    command: >-
+      mongod --configsvr 
+      --replSet cfgrs 
+      --port 27019 
+      --bind_ip_all
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27319:27019"
+    volumes:
+      - cfgsvr3-data:/data/db
+      - cfgsvr3-config:/data/configdb
+    healthcheck:
+      test: ["CMD", "mongosh", "--port", "27019", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: always
+
   # Shard 1
   shard1-1:
     <<: *shard-node-base
     hostname: shard1-1
     container_name: shard-01-node-a
     depends_on:
+      cfgsvr1:
+        condition: service_healthy
+      cfgsvr2:
+        condition: service_healthy
+      cfgsvr3:
+        condition: service_healthy
       shard1-2:
         condition: service_healthy
       shard1-3:

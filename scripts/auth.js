@@ -1,6 +1,9 @@
-let attempts = 0;
+const DB_USERNAME = "admin";
+const DB_PASSWORD = "admin123";
+const MONGO_INITDB_DATABASE = "admin";
 const maxAttempts = 30;
 const waitMs = 2000;
+let attempts = 0;
 
 while (attempts < maxAttempts) {
     try {
@@ -13,12 +16,12 @@ while (attempts < maxAttempts) {
             continue;
         }
 
-        db = db.getSiblingDB(process.env.MONGO_INITDB_DATABASE);
+        db = db.getSiblingDB(MONGO_INITDB_DATABASE);
         
         db.createUser({ 
-            user: process.env.DB_USERNAME,
-            pwd: process.env.DB_PASSWORD,
-            roles: [{ role: 'root', db: process.env.MONGO_INITDB_DATABASE }] 
+            user: DB_USERNAME,
+            pwd: DB_PASSWORD,
+            roles: [{ role: 'root', db: MONGO_INITDB_DATABASE }] 
         }, { w: 'majority', wtimeout: 5000 });
         
         print("Successfully created user");
