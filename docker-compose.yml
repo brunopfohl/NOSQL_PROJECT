@@ -11,6 +11,9 @@ volumes:
   shard2-1-data:
   shard2-2-data:
   shard2-3-data:
+  shard3-1-data:
+  shard3-2-data:
+  shard3-3-data:
 
 x-mongodb-config: &mongodb-config
   build:
@@ -194,4 +197,89 @@ services:
       - "27127:27017"
     volumes:
       - shard2-3-data:/data/db
+    restart: always
+
+  # Shard 3
+  shard3-1:
+    <<: *shard-node-base
+    hostname: shard3-1
+    container_name: shard-03-node-a
+    depends_on:
+      shard3-2:
+        condition: service_healthy
+      shard3-3:
+        condition: service_healthy
+    healthcheck:
+      test: |
+        bash -c 'if mongosh --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --eval "rs.status().ok" | grep -q "1"; then
+            exit 0;
+          else
+            mongosh < /data/scripts/init-shard3.js || exit 1;
+          fi
+        else
+          exit 1;
+        fi'
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
+    command: >-
+      mongod --replSet shard3rs 
+      --shardsvr 
+      --port 27017 
+      --bind_ip_all
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27128:27017"
+    volumes:
+      - shard3-1-data:/data/db
+      - ./scripts:/data/scripts
+    links:
+      - shard3-2
+      - shard3-3
+    restart: always
+
+  shard3-2:
+    <<: *shard-node-base
+    hostname: shard3-2
+    container_name: shard-03-node-b
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    command: >-
+      mongod --replSet shard3rs 
+      --shardsvr 
+      --port 27017 
+      --bind_ip_all
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27129:27017"
+    volumes:
+      - shard3-2-data:/data/db
+    restart: always
+
+  shard3-3:
+    <<: *shard-node-base
+    hostname: shard3-3
+    container_name: shard-03-node-c
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    command: >-
+      mongod --replSet shard3rs 
+      --shardsvr 
+      --port 27017 
+      --bind_ip_all
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27130:27017"
+    volumes:
+      - shard3-3-data:/data/db
     restart: always
