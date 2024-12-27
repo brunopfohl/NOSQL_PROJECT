@@ -5,254 +5,193 @@ networks:
     driver: bridge
 
 volumes:
-  cfgsvr1-data:
-  cfgsvr2-data:
-  cfgsvr3-data:
   shard1-1-data:
   shard1-2-data:
   shard1-3-data:
   shard2-1-data:
   shard2-2-data:
   shard2-3-data:
-  cfgsvr1-config:
-  cfgsvr2-config:
-  cfgsvr3-config:
-  shard1-1-config:
-  shard1-2-config:
-  shard1-3-config:
-  shard2-1-config:
-  shard2-2-config:
-  shard2-3-config:
 
 x-mongodb-config: &mongodb-config
-  image: mongo:latest
   build:
-    context: mongodb-build
+    context: .
   networks:
     - mongodb-network
   environment: &mongodb-env
     MONGO_INITDB_DATABASE: admin
-    DB_USERNAME: admin
-    DB_PASSWORD: admin
-
-x-config-server: &config-server-base
-  <<: *mongodb-config
-  command: mongod --configsvr --replSet cfgrs --port 27017 --keyFile /data/mongodb-keyfile
+    DB_USERNAME: '${MONGO_ADMIN_USER:-admin}'
+    DB_PASSWORD: '${MONGO_ADMIN_PASSWD:-veryStringPassword}'
 
 x-shard-node: &shard-node-base
   <<: *mongodb-config
 
 services:
-  # Config servers
-  cfgsvr1:
-    <<: *config-server-base
-    hostname: cfgsvr1
-    container_name: mongo-config-01
-    volumes:
-      - cfgsvr1-data:/data/db
-      - cfgsvr1-config:/data/configdb
-      - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/01-init.js
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-    ports:
-      - "27117:27017"
-    healthcheck:
-      test: mongosh --port 27017 --eval "rs.status()" || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: always
-    links:
-      - shard1-1
-      - shard2-1
-      - cfgsvr2
-      - cfgsvr3
-
-  cfgsvr2:
-    <<: *config-server-base
-    hostname: cfgsvr2
-    container_name: mongo-config-02
-    ports:
-      - "27118:27017"
-    volumes:
-      - cfgsvr2-data:/data/db
-      - cfgsvr2-config:/data/configdb
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-    restart: always
-  cfgsvr3:
-    <<: *config-server-base
-    hostname: cfgsvr3
-    container_name: mongo-config-03
-    ports:
-      - "27119:27017"
-    volumes:
-      - cfgsvr3-data:/data/db
-      - cfgsvr3-config:/data/configdb
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-    restart: always
-
-  # Router (mongos)
-  router-1:
-    <<: *mongodb-config
-    hostname: router-1
-    container_name: mongo-router-01
-    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --port 27017 --keyFile /data/mongodb-keyfile
-    ports:
-      - "27120:27017"
-    volumes:
-      - ./scripts/mongo/init-router.js:/docker-entrypoint-initdb.d/01-init-router.js
-      #- ./scripts/mongo/init-collections.js:/docker-entrypoint-initdb.d/02-init-collections.js
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-  router-2:
-    <<: *mongodb-config
-    hostname: router-2
-    container_name: mongo-router-02
-    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --port 27017 --keyFile /data/mongodb-keyfile
-    ports:
-      - "27121:27017"
-    volumes:
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-    links:
-      - router-1
-
   # Shard 1
   shard1-1:
     <<: *shard-node-base
     hostname: shard1-1
     container_name: shard-01-node-a
+    depends_on:
+      shard1-2:
+        condition: service_healthy
+      shard1-3:
+        condition: service_healthy
+    healthcheck:
+      test: |
+        bash -c 'if mongosh --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --eval "rs.status().ok" | grep -q "1"; then
+            exit 0;
+          else
+            mongosh < /data/scripts/init-shard1.js || exit 1;
+          fi
+        else
+          exit 1;
+        fi'
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
     command: >-
       mongod --replSet shard1rs 
       --shardsvr 
       --port 27017 
-      --bind_ip_all 
+      --bind_ip_all
       --keyFile /data/mongodb-keyfile
     ports:
       - "27122:27017"
     volumes:
       - shard1-1-data:/data/db
-      - shard1-1-config:/data/configdb
-      - ./scripts/mongo/init-shard1.js:/docker-entrypoint-initdb.d/01-init.js
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-    restart: always
+      - ./scripts:/data/scripts
     links:
       - shard1-2
       - shard1-3
-    healthcheck:
-      test: mongosh --port 27017 --eval "rs.status()" || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+    restart: always
 
   shard1-2:
     <<: *shard-node-base
     hostname: shard1-2
     container_name: shard-01-node-b
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     command: >-
       mongod --replSet shard1rs 
       --shardsvr 
       --port 27017 
-      --bind_ip_all 
+      --bind_ip_all
       --keyFile /data/mongodb-keyfile
     ports:
       - "27123:27017"
     volumes:
       - shard1-2-data:/data/db
-      - shard1-2-config:/data/configdb
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
 
   shard1-3:
     <<: *shard-node-base
     hostname: shard1-3
     container_name: shard-01-node-c
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     command: >-
       mongod --replSet shard1rs 
       --shardsvr 
       --port 27017 
-      --bind_ip_all 
+      --bind_ip_all
       --keyFile /data/mongodb-keyfile
     ports:
       - "27124:27017"
     volumes:
       - shard1-3-data:/data/db
-      - shard1-3-config:/data/configdb
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
+    restart: always
 
   # Shard 2
   shard2-1:
     <<: *shard-node-base
     hostname: shard2-1
     container_name: shard-02-node-a
+    depends_on:
+      shard2-2:
+        condition: service_healthy
+      shard2-3:
+        condition: service_healthy
+    healthcheck:
+      test: |
+        bash -c 'if mongosh --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --eval "rs.status().ok" | grep -q "1"; then
+            exit 0;
+          else
+            mongosh < /data/scripts/init-shard2.js || exit 1;
+          fi
+        else
+          exit 1;
+        fi'
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
     command: >-
-      mongod --shardsvr 
-      --replSet shard2rs 
-      --port 27017
-      --bind_ip_all 
+      mongod --replSet shard2rs 
+      --shardsvr 
+      --port 27017 
+      --bind_ip_all
       --keyFile /data/mongodb-keyfile
     ports:
       - "27125:27017"
     volumes:
       - shard2-1-data:/data/db
-      - shard2-1-config:/data/configdb
-      - ./scripts/mongo/init-shard2.js:/docker-entrypoint-initdb.d/init.js
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-    restart: always
+      - ./scripts:/data/scripts
     links:
       - shard2-2
       - shard2-3
+    restart: always
 
   shard2-2:
     <<: *shard-node-base
     hostname: shard2-2
     container_name: shard-02-node-b
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     command: >-
-      mongod --shardsvr 
-      --replSet shard2rs 
-      --port 27017
-      --bind_ip_all 
+      mongod --replSet shard2rs 
+      --shardsvr 
+      --port 27017 
+      --bind_ip_all
       --keyFile /data/mongodb-keyfile
     ports:
       - "27126:27017"
     volumes:
       - shard2-2-data:/data/db
-      - shard2-2-config:/data/configdb
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
+    restart: always
 
   shard2-3:
     <<: *shard-node-base
     hostname: shard2-3
     container_name: shard-02-node-c
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
     command: >-
-      mongod --shardsvr 
-      --replSet shard2rs 
-      --port 27017
-      --bind_ip_all 
+      mongod --replSet shard2rs 
+      --shardsvr 
+      --port 27017 
+      --bind_ip_all
       --keyFile /data/mongodb-keyfile
     ports:
       - "27127:27017"
     volumes:
       - shard2-3-data:/data/db
-      - shard2-3-config:/data/configdb
-      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
-
-  # Monitoring
-  prometheus:
-    image: prom/prometheus
-    container_name: mongodb-prometheus
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    networks:
-      - mongodb-network
-
-  grafana:
-    image: grafana/grafana
-    container_name: mongodb-grafana
-    ports:
-      - "3000:3000"
-    networks:
-      - mongodb-network
-    depends_on:
-      - prometheus
+    restart: always
