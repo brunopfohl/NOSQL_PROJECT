@@ -25,7 +25,9 @@ volumes:
   shard2-3-config:
 
 x-mongodb-config: &mongodb-config
-  image: mongo:7.0-jammy
+  image: mongo:latest
+  build:
+    context: mongodb-build
   networks:
     - mongodb-network
   environment: &mongodb-env
@@ -35,7 +37,7 @@ x-mongodb-config: &mongodb-config
 
 x-config-server: &config-server-base
   <<: *mongodb-config
-  command: mongod --configsvr --replSet config-replica-set --port 2017 --keyFile /etc/mongodb/pki/keyfile
+  command: mongod --configsvr --replSet cfgrs --port 27017 --keyFile /data/mongodb-keyfile
   deploy: &config-resources
     resources:
       limits:
@@ -65,7 +67,6 @@ services:
     volumes:
       - cfgsvr1-data:/data/db
       - cfgsvr1-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/01-init.js
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     ports:
@@ -92,7 +93,6 @@ services:
     volumes:
       - cfgsvr2-data:/data/db
       - cfgsvr2-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
   cfgsvr3:
@@ -104,7 +104,6 @@ services:
     volumes:
       - cfgsvr3-data:/data/db
       - cfgsvr3-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
 
@@ -112,24 +111,24 @@ services:
   router-1:
     <<: *mongodb-config
     hostname: router-1
-    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --port 27017 --keyFile /etc/mongodb/pki/keyfile
+    container_name: mongo-router-01
+    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --port 27017 --keyFile /data/mongodb-keyfile
     ports:
       - "27120:27017"
     deploy: *config-resources
     volumes:
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-router.js:/docker-entrypoint-initdb.d/01-init-router.js
-      - ./scripts/mongo/init-collections.js:/docker-entrypoint-initdb.d/02-init-collections.js
+      #- ./scripts/mongo/init-collections.js:/docker-entrypoint-initdb.d/02-init-collections.js
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
   router-2:
     <<: *mongodb-config
     hostname: router-2
-    command: mongos --configdb cfgrs/cfgsvr1:27019,cfgsvr2:27019,cfgsvr3:27019 --bind_ip_all --port 27017 --keyFile /etc/mongodb/pki/keyfile
+    container_name: mongo-router-02
+    command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --port 27017 --keyFile /data/mongodb-keyfile
     ports:
       - "27121:27017"
     deploy: *config-resources
     volumes:
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     links:
       - router-1
@@ -144,13 +143,12 @@ services:
       --shardsvr 
       --port 27017 
       --bind_ip_all 
-      --keyFile /etc/mongodb/pki/keyfile
+      --keyFile /data/mongodb-keyfile
     ports:
       - "27122:27017"
     volumes:
       - shard1-1-data:/data/db
       - shard1-1-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard1.js:/docker-entrypoint-initdb.d/01-init.js
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
@@ -173,31 +171,30 @@ services:
       --shardsvr 
       --port 27017 
       --bind_ip_all 
-      --keyFile /etc/mongodb/pki/keyfile
+      --keyFile /data/mongodb-keyfile
     ports:
       - "27123:27017"
     volumes:
       - shard1-2-data:/data/db
       - shard1-2-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
 
   shard1-3:
     <<: *shard-node-base
     hostname: shard1-3
+    container_name: shard-01-node-c
     command: >-
       mongod --replSet shard1rs 
       --shardsvr 
       --port 27017 
       --bind_ip_all 
-      --keyFile /etc/mongodb/pki/keyfile
+      --keyFile /data/mongodb-keyfile
     ports:
       - "27124:27017"
     volumes:
       - shard1-3-data:/data/db
       - shard1-3-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
 
   # Shard 2
@@ -210,13 +207,12 @@ services:
       --replSet shard2rs 
       --port 27017
       --bind_ip_all 
-      --keyFile /etc/mongodb/pki/keyfile
+      --keyFile /data/mongodb-keyfile
     ports:
       - "27125:27017"
     volumes:
       - shard2-1-data:/data/db
       - shard2-1-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard2.js:/docker-entrypoint-initdb.d/init.js
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
@@ -227,40 +223,41 @@ services:
   shard2-2:
     <<: *shard-node-base
     hostname: shard2-2
+    container_name: shard-02-node-b
     command: >-
       mongod --shardsvr 
       --replSet shard2rs 
       --port 27017
       --bind_ip_all 
-      --keyFile /etc/mongodb/pki/keyfile
+      --keyFile /data/mongodb-keyfile
     ports:
       - "27126:27017"
     volumes:
       - shard2-2-data:/data/db
       - shard2-2-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
 
   shard2-3:
     <<: *shard-node-base
     hostname: shard2-3
+    container_name: shard-02-node-c
     command: >-
       mongod --shardsvr 
       --replSet shard2rs 
       --port 27017
       --bind_ip_all 
-      --keyFile /etc/mongodb/pki/keyfile
+      --keyFile /data/mongodb-keyfile
     ports:
       - "27127:27017"
     volumes:
       - shard2-3-data:/data/db
       - shard2-3-config:/data/configdb
-      - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
 
   # Monitoring
   prometheus:
     image: prom/prometheus
+    container_name: mongodb-prometheus
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
@@ -270,6 +267,7 @@ services:
 
   grafana:
     image: grafana/grafana
+    container_name: mongodb-grafana
     ports:
       - "3000:3000"
     networks:
