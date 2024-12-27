@@ -76,7 +76,8 @@ services:
       - cfgsvr1-data:/data/db
       - cfgsvr1-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
-      - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/init.js
+      - ./scripts/mongo/init-configserver.js:/docker-entrypoint-initdb.d/01-init.js
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     ports:
       - "27019:27019"
     healthcheck:
@@ -108,6 +109,7 @@ services:
       - cfgsvr2-data:/data/db
       - cfgsvr2-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
     depends_on:
       - shard1-1
@@ -131,6 +133,7 @@ services:
       - cfgsvr3-data:/data/db
       - cfgsvr3-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
     depends_on:
       - shard1-1
@@ -148,6 +151,7 @@ services:
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-router.js:/docker-entrypoint-initdb.d/init-router.js
       - ./scripts/mongo/init-collections.js:/docker-entrypoint-initdb.d/init-collections.js
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     depends_on:
       - cfgsvr1
       - cfgsvr2
@@ -162,6 +166,7 @@ services:
     deploy: *config-resources
     volumes:
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     depends_on:
       - cfgsvr1
       - cfgsvr2
@@ -186,6 +191,7 @@ services:
       - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard1.js:/docker-entrypoint-initdb.d/init.js
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
     links:
       - shard1-2
@@ -212,6 +218,7 @@ services:
       - shard1-2-config:/data/configdb
       - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
 
   shard1-3:
@@ -227,6 +234,7 @@ services:
       - shard1-3-data:/data/db
       - shard1-3-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
 
   # Shard 2
   shard2-1:
@@ -247,6 +255,7 @@ services:
       - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
       - ./scripts/mongo/init-shard2.js:/docker-entrypoint-initdb.d/init.js
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     restart: always
     links:
       - shard2-2
@@ -266,6 +275,7 @@ services:
       - shard2-2-config:/data/configdb
       - ./scripts:/scripts
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
 
   shard2-3:
     <<: *shard-node-base
@@ -280,6 +290,7 @@ services:
       - shard2-3-data:/data/db
       - shard2-3-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+      - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
 
   # Monitoring
   prometheus:
