@@ -28,7 +28,10 @@ x-mongodb-config: &mongodb-config
   image: mongo:7.0-jammy
   networks:
     - mongodb-network
-  environment: &mongodb-env {}
+  environment: &mongodb-env
+    MONGO_INITDB_DATABASE: admin
+    DB_USERNAME: admin
+    DB_PASSWORD: admin
 
 x-config-server: &config-server-base
   <<: *mongodb-config
@@ -113,10 +116,25 @@ services:
   cfgsvr3:
     <<: *config-server-base
     hostname: cfgsvr3
+    container_name: mongo-config-03
+    command: >-
+      mongod --configsvr 
+      --replSet cfgrs 
+      --port 27019 
+      --bind_ip_all 
+      --keyFile /etc/mongodb/pki/keyfile
+      --wiredTigerCacheSizeGB 1
+      --oplogSize 1024
+      --setParameter diagnosticDataCollectionEnabled=true
+      --setParameter enableLocalhostAuthBypass=false
     volumes:
       - cfgsvr3-data:/data/db
       - cfgsvr3-config:/data/configdb
       - ./scripts/mongo/rs_keyfile:/etc/mongodb/pki/keyfile
+    restart: always
+    depends_on:
+      - shard1-1
+      - shard2-1
 
   # Router (mongos)
   router-1:
