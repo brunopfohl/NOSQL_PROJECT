@@ -20,6 +20,8 @@ volumes:
   cfgsvr1-config:
   cfgsvr2-config:
   cfgsvr3-config:
+  mongos1-data:
+  mongos2-data:
 
 x-mongodb-config: &mongodb-config
   build:
@@ -109,11 +111,11 @@ services:
       retries: 3
     restart: always
 
-  # Shard 1
-  shard1-1:
-    <<: *shard-node-base
-    hostname: shard1-1
-    container_name: shard-01-node-a
+  # Router nodes
+  router1:
+    <<: *mongodb-config
+    hostname: router1
+    container_name: router-01
     depends_on:
       cfgsvr1:
         condition: service_healthy
@@ -121,6 +123,59 @@ services:
         condition: service_healthy
       cfgsvr3:
         condition: service_healthy
+    command: >-
+      mongos
+      --configdb cfgrs/cfgsvr1:27019,cfgsvr2:27019,cfgsvr3:27019
+      --bind_ip_all
+      --port 27017
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongos1-data:/data/db
+      - ./scripts:/data/scripts
+    healthcheck:
+      test: |
+        bash -c 'if mongosh --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          mongosh < /data/scripts/init-router.js || exit 1;
+        else
+          exit 1;
+        fi'
+      interval: 10s
+      timeout: 30s
+      retries: 3
+      start_period: 40s
+    restart: always
+
+  router2:
+    <<: *mongodb-config
+    hostname: router2
+    container_name: router-02
+    depends_on:
+      cfgsvr1:
+        condition: service_healthy
+      cfgsvr2:
+        condition: service_healthy
+      cfgsvr3:
+        condition: service_healthy
+    command: >-
+      mongos
+      --configdb cfgrs/cfgsvr1:27019,cfgsvr2:27019,cfgsvr3:27019
+      --bind_ip_all
+      --port 27017
+      --keyFile /data/mongodb-keyfile
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongos2-data:/data/db
+    restart: always
+
+  # Shard 1
+  shard1-1:
+    <<: *shard-node-base
+    hostname: shard1-1
+    container_name: shard-01-node-a
+    depends_on:
       shard1-2:
         condition: service_healthy
       shard1-3:
