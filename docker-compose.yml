@@ -38,25 +38,9 @@ x-mongodb-config: &mongodb-config
 x-config-server: &config-server-base
   <<: *mongodb-config
   command: mongod --configsvr --replSet cfgrs --port 27017 --keyFile /data/mongodb-keyfile
-  deploy: &config-resources
-    resources:
-      limits:
-        cpus: '1'
-        memory: 1G
-      reservations:
-        cpus: '0.5'
-        memory: 512M
 
 x-shard-node: &shard-node-base
   <<: *mongodb-config
-  deploy: &shard-resources
-    resources:
-      limits:
-        cpus: '2'
-        memory: 2G
-      reservations:
-        cpus: '1'
-        memory: 1G
 
 services:
   # Config servers
@@ -115,7 +99,6 @@ services:
     command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --port 27017 --keyFile /data/mongodb-keyfile
     ports:
       - "27120:27017"
-    deploy: *config-resources
     volumes:
       - ./scripts/mongo/init-router.js:/docker-entrypoint-initdb.d/01-init-router.js
       #- ./scripts/mongo/init-collections.js:/docker-entrypoint-initdb.d/02-init-collections.js
@@ -127,7 +110,6 @@ services:
     command: mongos --configdb cfgrs/cfgsvr1:27017,cfgsvr2:27017,cfgsvr3:27017 --bind_ip_all --port 27017 --keyFile /data/mongodb-keyfile
     ports:
       - "27121:27017"
-    deploy: *config-resources
     volumes:
       - ./scripts/mongo/auth.js:/docker-entrypoint-initdb.d/99-auth.js
     links:
