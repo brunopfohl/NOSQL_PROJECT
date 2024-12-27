@@ -7,9 +7,9 @@ while (attempt < maxAttempts) {
         rs.initiate({
             _id: "shard2rs",
             members: [
-                { _id: 0, host: "shard2-1:27018", priority: 2 },
-                { _id: 1, host: "shard2-2:27018", priority: 1 },
-                { _id: 2, host: "shard2-3:27018", priority: 1 }
+                { _id: 0, host: "shard2-1:27017", priority: 2 },
+                { _id: 1, host: "shard2-2:27017", priority: 1 },
+                { _id: 2, host: "shard2-3:c27017", priority: 1 }
             ]
         });
         print("Shard 2 replica set initialized successfully");

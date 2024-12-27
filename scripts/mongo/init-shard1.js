@@ -1,8 +1,27 @@
-rs.initiate({
-    _id: "shard1rs",
-    members: [
-        { _id: 0, host: "shard1-1:27018" },
-        { _id: 1, host: "shard1-2:27018" },
-        { _id: 2, host: "shard1-3:27018" }
-    ]
-})
+let attempt = 0;
+const maxAttempts = 30;
+const waitMs = 2000;
+
+while (attempt < maxAttempts) {
+    try {
+        rs.initiate({
+            _id: "shard1rs",
+            members: [
+                { _id: 0, host: "shard1-1:27017", priority: 2 },
+                { _id: 1, host: "shard1-2:27017", priority: 1 },
+                { _id: 2, host: "shard1-3:27017", priority: 1 }
+            ]
+        });
+        print("Shard 1 replica set initialized successfully");
+        break;
+    } catch (err) {
+        attempt++;
+        if (attempt >= maxAttempts) {
+            print("Failed to initialize shardr1 replica set after " + maxAttempts + " attempts");
+            throw err;
+        }
+        print("Attempt " + attempt + " failed, retrying in " + waitMs + "ms");
+        sleep(waitMs);
+    }
+}
+

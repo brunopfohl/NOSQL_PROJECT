@@ -35,7 +35,7 @@ x-mongodb-config: &mongodb-config
 
 x-config-server: &config-server-base
   <<: *mongodb-config
-  command: mongod --configsvr --replSet config-replica-set --port 27019 --keyFile /etc/mongodb/pki/keyfile
+  command: mongod --configsvr --replSet config-replica-set --port 2017 --keyFile /etc/mongodb/pki/keyfile
   deploy: &config-resources
     resources:
       limits:
@@ -62,11 +62,6 @@ services:
     <<: *config-server-base
     hostname: cfgsvr1
     container_name: mongo-config-01
-    command: >-
-      mongod --configsvr 
-      --replSet cfgrs 
-      --port 27017
-      --keyFile /etc/mongodb/pki/keyfile
     volumes:
       - cfgsvr1-data:/data/db
       - cfgsvr1-config:/data/configdb
@@ -92,11 +87,6 @@ services:
     <<: *config-server-base
     hostname: cfgsvr2
     container_name: mongo-config-02
-    command: >-
-      mongod --configsvr 
-      --replSet cfgrs 
-      --port 27017
-      --keyFile /etc/mongodb/pki/keyfile
     ports:
       - "27118:27017"
     volumes:
@@ -109,11 +99,6 @@ services:
     <<: *config-server-base
     hostname: cfgsvr3
     container_name: mongo-config-03
-    command: >-
-      mongod --configsvr 
-      --replSet cfgrs 
-      --port 27017
-      --keyFile /etc/mongodb/pki/keyfile
     ports:
       - "27119:27017"
     volumes:
@@ -173,7 +158,7 @@ services:
       - shard1-2
       - shard1-3
     healthcheck:
-      test: mongosh --port 27018 --eval "rs.status()" || exit 1
+      test: mongosh --port 27017 --eval "rs.status()" || exit 1
       interval: 10s
       timeout: 5s
       retries: 3
@@ -202,11 +187,11 @@ services:
     <<: *shard-node-base
     hostname: shard1-3
     command: >-
-      mongod --replset shard1rs 
+      mongod --replSet shard1rs 
       --shardsvr 
       --port 27017 
       --bind_ip_all 
-      --keyfile /etc/mongodb/pki/keyfile
+      --keyFile /etc/mongodb/pki/keyfile
     ports:
       - "27124:27017"
     volumes:
