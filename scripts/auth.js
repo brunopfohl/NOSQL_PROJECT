@@ -1,5 +1,5 @@
 const DB_USERNAME = "admin";
-const DB_PASSWORD = "admin123";
+const DB_PASSWORD = "admin";
 const MONGO_INITDB_DATABASE = "admin";
 const maxAttempts = 30;
 const waitMs = 2000;

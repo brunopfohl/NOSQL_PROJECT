@@ -424,3 +424,27 @@ services:
     volumes:
       - shard3-3-data:/data/db
     restart: always
+
+  # JupyterLab service
+  jupyter:
+    image: jupyter/datascience-notebook:latest
+    container_name: jupyter-notebook
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./data:/home/jovyan/work:rw
+      - ./data/load_data.ipynb:/home/jovyan/work/load_data.ipynb:ro
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - JUPYTER_TOKEN=easy
+      - GRANT_SUDO=yes
+    user: root
+    networks:
+      - mongodb-network
+    command: >-
+      start-notebook.sh 
+      --NotebookApp.token='easy'
+      --NotebookApp.notebook_dir='/home/jovyan/work'
+      --NotebookApp.allow_root=true
+    working_dir: /home/jovyan/work
+    restart: unless-stopped

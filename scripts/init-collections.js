@@ -1,107 +1,77 @@
-db = db.getSiblingDB('knowledgedb')
+db = db.getSiblingDB('businessdb')
 
-db.createCollection("topics", {
+// Organizations collection
+db.createCollection("organizations", {
    validator: {
       $jsonSchema: {
          bsonType: "object",
-         required: ["name", "description"],
+         required: ["organizationId", "name", "industry"],
          properties: {
-            name: {
-               bsonType: "string",
-               description: "must be a string and is required"
-            },
-            description: {
-               bsonType: "string",
-               description: "must be a string and is required"
-            },
-            connections: {
-               bsonType: "array",
-               items: {
-                  bsonType: "object",
-                  required: ["relatedTopicId", "relationship"],
-                  properties: {
-                     relatedTopicId: {
-                        bsonType: "objectId"
-                     },
-                     relationship: {
-                        bsonType: "string"
-                     }
-                  }
-               }
-            }
+            organizationId: { bsonType: "string" },
+            name: { bsonType: "string" },
+            website: { bsonType: "string" },
+            country: { bsonType: "string" },
+            description: { bsonType: "string" },
+            founded: { bsonType: "int" },
+            industry: { bsonType: "string" },
+            numberOfEmployees: { bsonType: "int" }
          }
       }
    }
 })
 
-db.createCollection("resources", {
+// People collection
+db.createCollection("people", {
    validator: {
       $jsonSchema: {
          bsonType: "object",
-         required: ["topicId", "title", "type", "dateRead", "content"],
+         required: ["userId", "firstName", "lastName", "email"],
          properties: {
-            topicId: {
-               bsonType: "objectId"
-            },
-            title: {
-               bsonType: "string"
-            },
-            type: {
-               enum: ["Book", "Article", "Video", "Other"]
-            },
-            dateRead: {
-               bsonType: "date"
-            },
-            content: {
-               bsonType: "string"
-            },
-            tags: {
-               bsonType: "array",
-               items: {
-                  bsonType: "string"
-               }
-            }
+            userId: { bsonType: "string" },
+            firstName: { bsonType: "string" },
+            lastName: { bsonType: "string" },
+            sex: { bsonType: "string" },
+            email: { bsonType: "string" },
+            phone: { bsonType: "string" },
+            dateOfBirth: { bsonType: "date" },
+            jobTitle: { bsonType: "string" }
          }
       }
    }
 })
 
-db.createCollection("aiinsights", {
+// Customers collection
+db.createCollection("customers", {
    validator: {
       $jsonSchema: {
          bsonType: "object",
-         required: ["resourceId"],
+         required: ["customerId", "firstName", "lastName", "email"],
          properties: {
-            resourceId: {
-               bsonType: "objectId"
-            },
-            prompts: {
-               bsonType: "array",
-               items: {
-                  bsonType: "string"
-               }
-            },
-            insights: {
-               bsonType: "array",
-               items: {
-                  bsonType: "string"
-               }
-            },
-            notes: {
-               bsonType: "string"
-            }
+            customerId: { bsonType: "string" },
+            firstName: { bsonType: "string" },
+            lastName: { bsonType: "string" },
+            company: { bsonType: "string" },
+            city: { bsonType: "string" },
+            country: { bsonType: "string" },
+            phone1: { bsonType: "string" },
+            phone2: { bsonType: "string" },
+            email: { bsonType: "string" },
+            subscriptionDate: { bsonType: "date" },
+            website: { bsonType: "string" }
          }
       }
    }
 })
 
-db.topics.createIndex({ "name": 1 }, { unique: true })
-db.resources.createIndex({ "topicId": 1 })
-db.resources.createIndex({ "tags": 1 })
-db.aiinsights.createIndex({ "resourceId": 1 })
+// Create indexes for sharding
+db.organizations.createIndex({ "industry": 1, "country": 1 })
+db.people.createIndex({ "jobTitle": 1, "dateOfBirth": 1 })
+db.customers.createIndex({ "country": 1, "subscriptionDate": 1 })
 
-sh.enableSharding("knowledgedb")
+// Enable sharding for the database
+sh.enableSharding("businessdb")
 
-sh.shardCollection("knowledgedb.topics", { "name": 1 })
-sh.shardCollection("knowledgedb.resources", { "topicId": 1 })
-sh.shardCollection("knowledgedb.aiinsights", { "resourceId": 1 })
+// Configure sharding for collections
+sh.shardCollection("businessdb.organizations", { "industry": 1, "country": 1 })
+sh.shardCollection("businessdb.people", { "jobTitle": 1, "dateOfBirth": 1 })
+sh.shardCollection("businessdb.customers", { "country": 1, "subscriptionDate": 1 })

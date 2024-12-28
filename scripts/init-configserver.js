@@ -21,8 +21,8 @@ while (attempt < maxAttempts) {
         sleep(5000);
         
         // Load and execute auth script
-        //print("Loading auth configuration...");
-       // load("/data/scripts/auth.js");
+        print("Loading auth configuration...");
+        load("/data/scripts/auth.js");
         
         break;
     } catch (err) {
