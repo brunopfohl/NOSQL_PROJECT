@@ -433,7 +433,6 @@ services:
       - "8888:8888"
     volumes:
       - ./data:/home/jovyan/work:rw
-      - ./data/load_data.ipynb:/home/jovyan/work/load_data.ipynb:ro
     environment:
       - JUPYTER_ENABLE_LAB=yes
       - JUPYTER_TOKEN=easy
