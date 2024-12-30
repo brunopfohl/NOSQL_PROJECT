@@ -17,6 +17,13 @@ while (attempt < maxAttempts) {
             ]
         });
         print("Shard 1 replica set initialized successfully");
+
+        // Wait for replica set to stabilize
+        sleep(5000);
+        
+        // Load and execute auth script
+        print("Loading auth configuration...");
+        load("/data/scripts/auth.js");
         break;
     } catch (err) {
         attempt++;
