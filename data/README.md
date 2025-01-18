@@ -1,45 +1,97 @@
-# MongoDB Sharded Cluster Examples
+# MongoDB Sharded Cluster Analysis Project
 
-This directory contains Jupyter notebooks demonstrating various aspects of MongoDB sharded cluster operations.
+This project demonstrates MongoDB operations and analysis using a sharded cluster infrastructure.
 
-## Notebooks:
+## Infrastructure Setup
 
-1. **Basic Operations** (1_basic_operations.ipynb)
-   - CRUD operations in sharded environment
-   - Data validation
-   - Batch operations
+### Docker Compose Configuration
+The MongoDB cluster is deployed using Docker Compose with the following components:
 
-2. **Advanced Aggregation** (2_aggregation.ipynb)
-   - Complex pipelines
-   - Group operations
-   - Statistical analysis
+- **Config Servers** (3 nodes)
+  - config1:27017
+  - config2:27017 
+  - config3:27017
 
-3. **Cluster Management** (3_cluster_management.ipynb)
-   - Shard analysis
-   - Node failure handling
-   - Recovery procedures
+- **Shard 1** (3 nodes)
+  - shard1-1:27017 (primary)
+  - shard1-2:27017
+  - shard1-3:27017
 
-4. **Complex Queries** (4_complex_queries.ipynb)
-   - Multi-collection operations
-   - Advanced search capabilities
-   - Pattern matching
+- **Shard 2** (3 nodes)
+  - shard2-1:27017 (primary)
+  - shard2-2:27017
+  - shard2-3:27017
 
-5. **Performance Analytics** (5_performance_analytics.ipynb)
-   - Query optimization
-   - Resource monitoring
-   - Bottleneck analysis
+- **Shard 3** (3 nodes)
+  - shard3-1:27017 (primary)
+  - shard3-2:27017
+  - shard3-3:27017
 
-## Usage:
+- **Router** (mongos)
+  - router1:27017
+
+## Analysis Notebooks
+
+### 1. Basic Operations (`1_basic_operations.ipynb`)
+- Create, Read, Update, Delete (CRUD) operations
+- Document counting and distinct value queries
+- Basic collection management
+- Simple data manipulation examples
+
+### 2. Filtering Records (`2_filtering_records.ipynb`)
+- Simple filters:
+  - Country-based filtering
+  - Industry-based filtering
+- Complex filters:
+  - Multiple field criteria
+  - Nested conditions with OR logic
+  - Pattern matching using regex
+  - Array filtering with $elemMatch
+
+### 3. Aggregation Operations (`3_aggregation.ipynb`)
+- Basic company statistics
+- Company age analysis
+- Industry performance analysis
+- Customer subscription trends
+- Employee age distribution
+- Temporal market analysis
+
+### 4. Cluster Management (`4_cluster_management.ipynb`)
+- Server status monitoring
+- Build and host information
+- Database and collection listing
+- Shard management
+- Chunk distribution analysis
+- Balancer settings
+- Schema validation rules
+
+### 5. Data Transformations (`5_data_transformations.ipynb`)
+- Field derivation and computed fields
+- Data normalization techniques
+- Data enrichment with lookups
+- Historical snapshots creation
+
+### 6. Failover Testing (`6_failover.ipynb`)
+- Shard primary monitoring
+- Failover simulation
+- Continuous operation testing
+- Cluster resilience verification
+
+## Quick Start
 
 1. Start the MongoDB cluster:
 ```bash
 docker-compose up -d
 ```
 
-2. Access JupyterLab:
-```
-http://localhost:8888
-Token: easy
-```
+2. Access Jupyter Lab interface:
+- Open http://localhost:8888 in your browser
+- Password: `easy`
+- Execute notebook load_data.ipynb first (data import), then you can execute the rest in any order
 
-3. Run notebooks in order (1-5)
+## Connection Details
+- MongoDB URI: `mongodb://admin:admin@router1:27017/businessdb?authSource=admin`
+
+## Notes
+- Sample data is automatically loaded during cluster startup
+- All required Python packages are pre-installed in the Jupyter container
