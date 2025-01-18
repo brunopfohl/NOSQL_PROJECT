@@ -1,222 +1,123 @@
-# MongoDB Sharded Cluster with Docker Compose
+# MongoDB Sharded Cluster Project
 
-This project sets up a MongoDB sharded cluster using Docker Compose, consisting of:
-- 1 Router (mongos)
-- 3 Config Servers
-- 2 Shards (each with 3 replica set members)
+A Docker-based MongoDB sharded cluster setup with multiple shards, config servers, and routers for high availability and scalability.
+
+## Architecture
+
+- 2 Query Routers (mongos)
+- 3 Config Servers (replica set)
+- 3 Shards (each with 3 replica set members)
+- JupyterLab for data analysis
 
 ## Prerequisites
 
-- Docker
-- Docker Compose
-- Basic understanding of MongoDB sharding
+- Docker Engine >= 27.4.0
+- Docker Compose >= v2.31.0-desktop.2
 
-## Setup
+## Quick Start
 
-1. Create the keyfile for MongoDB authentication:
+1. Create authentication key:
 ```bash
-mkdir -p scripts/mongo
-openssl rand -base64 756 > scripts/mongo/rs_keyfile
-chmod 400 scripts/mongo/rs_keyfile
+mkdir -p auth
+openssl rand -base64 756 > auth/keyfile
+chmod 400 auth/keyfile
 ```
 
-2. Set environment variables (optional):
-```bash
-export DB_NAME=test
-export DB_USERNAME=myuser
-export DB_PASSWORD=mypassword
-```
-
-3. Start the cluster:
+2. Start the cluster:
 ```bash
 docker-compose up -d
 ```
 
-## Architecture
+3. Wait for initialization (approximately 2-3 minutes)
 
-- Router: localhost:27020  # Updated port
-- Config Servers: cfgsvr1:27017, cfgsvr2:27017, cfgsvr3:27017
-- Shard 1: shard1-1:27017, shard1-2:27017, shard1-3:27017
-- Shard 2: shard2-1:27017, shard2-2:27017, shard2-3:27017
-
-## High Availability Features
-
-### Multiple Query Routers
-- Primary: localhost:27017 (HAProxy)
-- Backup: localhost:27027 (Direct access)
-- Load balanced through HAProxy
-
-### Monitoring
-Access monitoring at:
-- Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000
-
-### Resource Management
-Each component has dedicated resource limits:
-- Config Servers: 1 CPU, 1GB RAM
-- Query Routers: 2 CPU, 2GB RAM
-- Shards: According to workload needs
-
-### Maintenance
-For rolling updates:
+4. Verify cluster status:
 ```bash
-# Update one router at a time
-docker-compose up -d --no-deps --build mongos1
-docker-compose up -d --no-deps --build mongos2
+docker exec -it router-01 mongosh --eval "sh.status()"
 ```
 
-### Backups
-Regular backups can be performed using:
+## Connection Details
+
+- Main Router: `mongodb://admin:admin@localhost:27017`
+- Backup Router: `mongodb://admin:admin@localhost:27018`
+- JupyterLab: `http://localhost:8888` (password: easy)
+
+## Available Collections
+
+The cluster comes preconfigured with three sharded collections in the `businessdb` database:
+- organizations
+- people
+- customers
+
+## Example Usage
+
+1. Connect to the cluster:
 ```bash
-docker exec mongos1 mongodump --uri="mongodb://admin:password@localhost:27017" --out=/backup
+docker exec -it router-01 mongosh "mongodb://admin:admin@localhost:27017/businessdb"
 ```
 
-## Connecting to the Cluster
-
-Connect through the router:
+2. Insert test data:
+```javascript
+db.organizations.insertOne({
+    organizationId: "org1",
+    name: "Test Company",
+    industry: "Technology"
+})
 ```
-mongodb://myuser:mypassword@localhost:27020  # Updated port
+
+3. Query across shards:
+```javascript
+db.organizations.find().explain("executionStats")
 ```
 
-## Verify Cluster Status
+## Monitoring
 
+Check replica set status:
 ```bash
-# Check config server replica set
-docker exec -it cfgsvr1 mongosh --eval "rs.status()"
+# Config servers
+docker exec -it cfg-node-a mongosh --eval "rs.status()"
 
-# Check shard1 replica set
-docker exec -it shard1-1 mongosh --eval "rs.status()"
-
-# Check shard2 replica set
-docker exec -it shard2-1 mongosh --eval "rs.status()"
-
-# Check cluster status
-docker exec -it mongos mongosh --eval "sh.status()"
+# Shard 1
+docker exec -it shard-01-node-a mongosh --eval "rs.status()"
 ```
 
-## Stopping the Cluster
+## Shutdown
 
+Stop the cluster:
 ```bash
 docker-compose down
 ```
 
-To remove all data volumes:
+Remove all data:
 ```bash
 docker-compose down -v
 ```
 
-# Personal Knowledge Graph MVP
+## Project Structure
 
-A MongoDB-based system for tracking learning topics, resources, and AI-generated insights.
+```
+.
+├── auth/               # Authentication keys
+├── scripts/           # MongoDB initialization scripts
+├── data/             # Shared data volume for Jupyter
+├── docker-compose.yml # Container orchestration
+├── Dockerfile        # MongoDB container definition
+└── README.md
+```
 
-## System Architecture
+## Troubleshooting
 
-The system consists of three main collections:
-
-1. **Topics**: Subject areas you're learning about
-2. **Resources**: Learning materials linked to topics
-3. **AIInsights**: AI-generated content about resources
-
-## Prerequisites
-
-- Node.js 18+
-- MongoDB 7.0+
-- TypeScript
-
-## Setup
-
-1. Install dependencies:
+1. If initialization fails, check logs:
 ```bash
-npm install mongoose dotenv typescript @types/node @types/mongoose
+docker-compose logs router1
 ```
 
-2. Configure environment:
+2. Restart specific component:
 ```bash
-cp .env.example .env
-# Edit .env with your MongoDB connection string
+docker-compose restart router1
 ```
 
-## Data Structure
-
-### Topics Collection
-```typescript
-{
-  name: string,          // e.g., "Machine Learning"
-  description: string,   // Brief overview
-  connections: [{        // Links to related topics
-    relatedTopicId: ObjectId,
-    relationship: string // e.g., "prerequisite", "related"
-  }]
-}
+3. Reset entire cluster:
+```bash
+docker-compose down -v
+docker-compose up -d
 ```
-
-### Resources Collection
-```typescript
-{
-  topicId: ObjectId,    // Reference to Topic
-  title: string,        // e.g., "Introduction to ML"
-  type: enum,           // Book, Article, Video
-  dateRead: Date,       // Consumption date
-  content: string,      // Summary/notes
-  tags: string[]        // Search keywords
-}
-```
-
-### AIInsights Collection
-```typescript
-{
-  resourceId: ObjectId, // Reference to Resource
-  prompts: string[],    // AI-generated questions
-  insights: string[],   // AI-generated summaries
-  notes: string        // Personal reflections
-}
-```
-
-## Usage Examples
-
-### Adding a New Topic
-```typescript
-const topic = await Topic.create({
-  name: "Machine Learning",
-  description: "Study of algorithms that improve through experience",
-  connections: []
-});
-```
-
-### Adding a Resource
-```typescript
-const resource = await Resource.create({
-  topicId: topic._id,
-  title: "Machine Learning Basics",
-  type: ResourceType.BOOK,
-  dateRead: new Date(),
-  content: "Comprehensive introduction to ML concepts...",
-  tags: ["ML", "AI", "basics"]
-});
-```
-
-### Adding AI Insights
-```typescript
-const insight = await AIInsight.create({
-  resourceId: resource._id,
-  prompts: ["Explain supervised learning"],
-  insights: ["Supervised learning is..."],
-  notes: "Need to review classification algorithms"
-});
-```
-
-## Data Relationships
-
-- Each Resource must be linked to one Topic
-- Topics can have many Resources
-- Each AIInsight is linked to one Resource
-- Resources can have multiple AIInsights
-- Topics can be connected to multiple other Topics
-
-## Tips
-
-1. Start with creating Topics first
-2. Add Resources as you consume content
-3. Generate AIInsights after adding Resources
-4. Use meaningful tags for better searchability
-5. Keep descriptions and notes concise but informative
