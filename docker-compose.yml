@@ -52,11 +52,11 @@ services:
       - ./scripts:/data/scripts
     healthcheck:
       test: |
-        bash -c 'if mongosh --port 27019 --eval "db.adminCommand(\"ping\")" > /dev/null; then
-          if mongosh --port 27019 --eval "rs.status().ok" | grep -q "1"; then
+        bash -c 'if mongosh --quiet "mongodb://admin:admin@localhost:27019/admin" --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --quiet "mongodb://admin:admin@localhost:27019/admin" --eval "rs.status().ok" | grep -q "1"; then
             exit 0;
           else
-            mongosh --port 27019 < /data/scripts/init-configserver.js || exit 1;
+            mongosh < /data/scripts/init-configserver.js || exit 1;
           fi
         else
           exit 1;
@@ -83,7 +83,7 @@ services:
       - cfgsvr2-data:/data/db
       - cfgsvr2-config:/data/configdb
     healthcheck:
-      test: ["CMD", "mongosh", "--port", "27019", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27019/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -105,7 +105,7 @@ services:
       - cfgsvr3-data:/data/db
       - cfgsvr3-config:/data/configdb
     healthcheck:
-      test: ["CMD", "mongosh", "--port", "27019", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27019/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -182,8 +182,8 @@ services:
         condition: service_healthy
     healthcheck:
       test: |
-        bash -c 'if mongosh --eval "db.adminCommand(\"ping\")" > /dev/null; then
-          if mongosh --eval "rs.status().ok" | grep -q "1"; then
+        bash -c 'if mongosh --quiet "mongodb://admin:admin@localhost:27017/admin" --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --quiet "mongodb://admin:admin@localhost:27017/admin" --eval "rs.status().ok" | grep -q "1"; then
             exit 0;
           else
             mongosh < /data/scripts/init-shard1.js || exit 1;
@@ -216,7 +216,7 @@ services:
     hostname: shard1-2
     container_name: shard-01-node-b
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -238,7 +238,7 @@ services:
     hostname: shard1-3
     container_name: shard-01-node-c
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -267,8 +267,8 @@ services:
         condition: service_healthy
     healthcheck:
       test: |
-        bash -c 'if mongosh --eval "db.adminCommand(\"ping\")" > /dev/null; then
-          if mongosh --eval "rs.status().ok" | grep -q "1"; then
+        bash -c 'if mongosh --quiet "mongodb://admin:admin@localhost:27017/admin" --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --quiet "mongodb://admin:admin@localhost:27017/admin" --eval "rs.status().ok" | grep -q "1"; then
             exit 0;
           else
             mongosh < /data/scripts/init-shard2.js || exit 1;
@@ -301,7 +301,7 @@ services:
     hostname: shard2-2
     container_name: shard-02-node-b
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -323,7 +323,7 @@ services:
     hostname: shard2-3
     container_name: shard-02-node-c
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -352,8 +352,8 @@ services:
         condition: service_healthy
     healthcheck:
       test: |
-        bash -c 'if mongosh --eval "db.adminCommand(\"ping\")" > /dev/null; then
-          if mongosh --eval "rs.status().ok" | grep -q "1"; then
+        bash -c 'if mongosh --quiet "mongodb://admin:admin@localhost:27017/admin" --eval "db.adminCommand(\"ping\")" > /dev/null; then
+          if mongosh --quiet "mongodb://admin:admin@localhost:27017/admin" --eval "rs.status().ok" | grep -q "1"; then
             exit 0;
           else
             mongosh < /data/scripts/init-shard3.js || exit 1;
@@ -386,7 +386,7 @@ services:
     hostname: shard3-2
     container_name: shard-03-node-b
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -408,7 +408,7 @@ services:
     hostname: shard3-3
     container_name: shard-03-node-c
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "mongodb://admin:admin@localhost:27017/admin", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 3
